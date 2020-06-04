@@ -12,13 +12,18 @@
 #     name: python3
 # ---
 
-# # Preliminary Data Analysis
+# # Preliminary Data Preprocessing
 
 #Import Required Packages
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn import preprocessing
+from pylab import rcParams
+
+# Import the two methods from heatmap library
+from heatmap import heatmap, corrplot
 
 # +
 # Import dataset from csv
@@ -70,6 +75,48 @@ print(df.isnull().sum())
 # Check for duplicated values
 df.duplicated().values.sum()
 # -
+
+# Drop customerID from the dataframe as while it provides useful individual information
+# it is not helpful in aggregate, due to the large variety of unique values.
+# Moreoever, we also drop totalCharges to avoid the issue of collinearity with monthly charges present.
+df = df.drop(['customerID','totalCharges'], axis=1)
+
+# # Exploratory Data Analysis
+
+# Let us examine the numerical variables statistical summary to see if we can find anything out of the ordinary.
+df.describe(include = ['float64','int64'])
+
+# +
+# Caclualte coefficients of variations
+
+df.select_dtypes(include=['float64','int64'])
+cv =  lambda x: np.std(x) / np.mean(x)
+var = np.apply_along_axis(cv, axis=0, arr=df.select_dtypes(include=['float64','int64']))
+print(var)
+# -
+
+# # Model Preprocessing
+
+# As the majority of features used in the dataset are primarily categorical features, converting them to dummy variables via oneHotEncoding and OrdinalEncoder methods from scikitlearn will enable us to utilize classification machine learning methods on the data.
+
+# Get Dummies
+df=pd.get_dummies(df,prefix_sep='_')
+
+# Tenure has a very high coefficient of variation compared to monthlyCharges, indicating it's much higher variability. 
+# Hence, before we integrate this into our model framework, we should standardize them to be on the same scale.
+
+# Calculate correlation data for each column pairing in the dataset (numerical only)
+# Rebalancing unbalanced classes using SMOTE resampling, by first importing relevant packages
+# Install a pip package in the current Jupyter kernel
+import sys
+!{sys.executable} -m pip install heatmapz
+
+
+from heatmap import heatmap, corrplot
+corr = df.corr()
+corr.style.background_gradient(cmap='coolwarm').set_precision(2)
+
+
 
 # # Unbalanced Classes
 # One major issue often found in many classification problems is the problem of unbalanced classes. This refers to the fact that for classification problems, the majority class generally has more samples or exists in greater proportions than the minority class, which skews the classification algorithim's predictive capacity. 
