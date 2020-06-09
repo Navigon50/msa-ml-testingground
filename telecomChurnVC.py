@@ -95,12 +95,93 @@ var = np.apply_along_axis(cv, axis=0, arr=df.select_dtypes(include=['float64','i
 print(var)
 # -
 
+ax = sns.boxenplot(x="tenure", y="churn", data=df)
+
+sns.catplot(x="contract", hue="churn",data=df, kind="count",height=4, aspect=1);
+
+sns.catplot(x="tenure", y="contract",
+
+                hue="churn",
+
+                data=df, kind="box",
+
+                height=6, aspect=1);
+
+sns.catplot(x="monthlyCharges", y="contract",
+
+                hue="churn",
+
+                data=df, kind="box",
+
+                height=6, aspect=1);
+
+sns.catplot(x="tenure", y="techSupport",
+
+                hue="churn",
+
+                data=df, kind="box",
+
+                height=6, aspect=1);
+
+sns.catplot(x="monthlyCharges", y="churn",
+            row="techSupport", aspect=.6,
+            kind="box", data=df);
+
+
+sns.catplot(x="tenure", y="onlineSecurity",
+
+                hue="churn",
+
+                data=df, kind="box",
+
+                height=6, aspect=1);
+
+sns.catplot(x="monthlyCharges", y="onlineSecurity",
+
+                hue="churn",
+
+                data=df, kind="box",
+
+                height=6, aspect=1);
+
+sns.catplot(x="tenure", y="internetService",
+
+                hue="churn",
+
+                data=df, kind="box",
+
+                height=6, aspect=1);
+
+sns.catplot(x="monthlyCharges", y="internetService",
+
+                hue="churn",
+
+                data=df, kind="box",
+
+                height=6, aspect=1);
+
+sns.catplot(x="tenure", y="paymentMethod",
+
+                hue="churn",
+
+                data=df, kind="box",
+
+                height=6, aspect=1);
+
+sns.catplot(x="monthlyCharges", y="paymentMethod",
+
+                hue="churn",
+
+                data=df, kind="box",
+
+                height=6, aspect=1);
+
 # # Model Preprocessing
 
 # As the majority of features used in the dataset are primarily categorical features, converting them to dummy variables via oneHotEncoding and OrdinalEncoder methods from scikitlearn will enable us to utilize classification machine learning methods on the data.
 
 # Get Dummies
-df=pd.get_dummies(df,prefix_sep='_')
+dfdum=pd.get_dummies(df,prefix_sep='_')
 
 # Tenure has a very high coefficient of variation compared to monthlyCharges, indicating it's much higher variability. 
 # Hence, before we integrate this into our model framework, we should standardize them to be on the same scale.
@@ -116,7 +197,15 @@ from heatmap import heatmap, corrplot
 corr = df.corr()
 corr.style.background_gradient(cmap='coolwarm').set_precision(2)
 
+# Analysing the correlation plot, we see most features are fairly weakly correlated, so we want to explore features that do have a high
+# correlation with churning
+# From the graph, these appear to be, tenure (which is negative correlated, month to month contracts, presence of tech support, online security, fiber optic service, and electronic check payment methods
+# fiber optic is also strongly corelated with monthyl charges, especially so if no internet service was present. 
 
+c = df.corr().abs()
+s = c.unstack()
+so = s.sort_values(kind="quicksort")
+so[so <1]
 
 # # Unbalanced Classes
 # One major issue often found in many classification problems is the problem of unbalanced classes. This refers to the fact that for classification problems, the majority class generally has more samples or exists in greater proportions than the minority class, which skews the classification algorithim's predictive capacity. 
