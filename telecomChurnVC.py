@@ -207,6 +207,103 @@ s = c.unstack()
 so = s.sort_values(kind="quicksort")
 so[so <1]
 
+# # Feature Selection
+
+# Import related packages
+from sklearn.feature_selection import *
+from sklearn.svm import LinearSVC
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.svm import SVC
+from sklearn.model_selection import StratifiedKFold
+from sklearn.feature_selection import RFECV
+
+df.shape
+
+#Split the dataset into features and target variable
+X = dfdum.iloc[:, 0:45]
+y = dfdum.iloc[:,46:47]
+
+
+type(y)
+
+selector = SelectPercentile(mutual_info_classif, percentile=10)
+selector.fit(X, y.values.ravel())
+# Get columns to keep and create new dataframe with those only
+cols = selector.get_support(indices=True)
+X_new = X.iloc[:,cols]
+X_new.columns
+
+
+# Under chi2 tests, the 10 best features are 'tenure', 'monthlyCharges', 'internetService_Fiber optic',
+#        'onlineSecurity_No', 'techSupport_No',
+#        'streamingTV_No internet service',
+#        'streamingMovies_No internet service', 'contract_Month-to-month',
+#        'contract_Two year', 'paymentMethod_Electronic check'
+# How about under F, tests?
+# 'tenure', 'internetService_Fiber optic', 'onlineSecurity_No',
+#        'onlineBackup_No', 'deviceProtection_No', 'techSupport_No',
+#        'streamingMovies_No internet service', 'contract_Month-to-month',
+#        'contract_Two year', 'paymentMethod_Electronic check']
+# Roughly the same, so what happens when we consider mutual info classification which looks at non-linear dependencies?
+# ['tenure', 'monthlyCharges', 'internetService_Fiber optic',
+#        'onlineSecurity_No', 'onlineBackup_No', 'techSupport_No',
+#        'streamingTV_No internet service', 'contract_Month-to-month',
+#        'contract_Two year', 'paymentMethod_Electronic check']
+# Top 10% of featurse:
+# ['tenure', 'internetService_Fiber optic', 'onlineSecurity_No',
+#        'techSupport_No', 'contract_Month-to-month'],
+#       dtype='object')
+# Top 10% Non-linear features tenure', 'onlineSecurity_No', 'techSupport_No',
+#        'contract_Month-to-month', 'paymentMethod_Electronic check'
+#        
+# Recursive Feature Selection
+#
+
+# +
+# Recursive Feature Elimination:
+# Create the RFE object and compute a cross-validated score.
+svc = SVC(kernel="linear")
+# The "accuracy" scoring is proportional to the number of correct
+# classifications
+rfecv = RFECV(estimator=svc, step=1, cv=StratifiedKFold(2),
+              scoring='accuracy')
+rfecv.fit(X, y.values.ravel())
+
+print("Optimal number of features : %d" % rfecv.n_features_)
+
+## Optimal number of features is 42
+# -
+
+# Plot number of features VS. cross-validation scores
+plt.figure()
+plt.xlabel("Number of features selected")
+plt.ylabel("Cross validation score (nb of correct classifications)")
+plt.plot(range(1, len(rfecv.grid_scores_) + 1), rfecv.grid_scores_)
+plt.show()
+
+# +
+#L1 Based Feature Selection
+lsvc = LinearSVC(C=0.01, penalty="l1", dual=False, max_iter = 5000).fit(X, y.values.ravel())
+model = SelectFromModel(lsvc, prefit=True)
+X_svc = model.transform(X)
+cols = model.get_support(indices=True)
+X_svc = X.iloc[:,cols]
+X_svc.columns
+
+# results might be a bit dodgy
+# -
+
+# Tree Based Feature Selection
+clf = ExtraTreesClassifier(n_estimators=50)
+clf = clf.fit(X, y.values.ravel())
+clf.feature_importances_
+modeltree = SelectFromModel(clf, prefit=True)
+X_tree = modeltree.transform(X)
+cols = modeltree.get_support(indices=True)
+X_svc = X.iloc[:,cols]
+X_svc.columns
+
+
 # # Unbalanced Classes
 # One major issue often found in many classification problems is the problem of unbalanced classes. This refers to the fact that for classification problems, the majority class generally has more samples or exists in greater proportions than the minority class, which skews the classification algorithim's predictive capacity. 
 #
