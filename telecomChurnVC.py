@@ -304,6 +304,49 @@ X_svc = X.iloc[:,cols]
 X_svc.columns
 
 
+# Train Test Split
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
+
+# # Experimenting with Classification Algorithims
+
+# +
+# Logistic Regression
+from sklearn.linear_model import LogisticRegression
+logr = LogisticRegression(solver = 'saga', random_state=0).fit(X, y)
+logr.predict(X[:2, :])
+logr.predict_proba(X[:2, :])
+logr.score(X, y)
+# Linear Discriminant Analysis
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+lda = LinearDiscriminantAnalysis()
+lda.fit(X, y)
+
+
+# Naive Bayes
+from sklearn.naive_bayes import GaussianNB
+gnb = GaussianNB()
+gnb.fit(X, Y)
+
+
+# Stochastic Gradient Descent
+from sklearn.linear_model import SGDClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+# Always scale the input. The most convenient way is to use a pipeline.
+sgd = make_pipeline(StandardScaler(),
+                     SGDClassifier(max_iter=1000, tol=1e-3))
+sgd.fit(X, Y)
+
+
+# Decision Tree Classifier
+
+# Random Forest Classifier
+
+# XGBoost
+# -
+
 # # Unbalanced Classes
 # One major issue often found in many classification problems is the problem of unbalanced classes. This refers to the fact that for classification problems, the majority class generally has more samples or exists in greater proportions than the minority class, which skews the classification algorithim's predictive capacity. 
 #
