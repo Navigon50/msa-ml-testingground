@@ -189,8 +189,8 @@ dfdum=pd.get_dummies(df,prefix_sep='_')
 # Calculate correlation data for each column pairing in the dataset (numerical only)
 # Rebalancing unbalanced classes using SMOTE resampling, by first importing relevant packages
 # Install a pip package in the current Jupyter kernel
-import sys
-!{sys.executable} -m pip install heatmapz
+#import sys
+#!{sys.executable} -m pip install heatmapz
 
 
 from heatmap import heatmap, corrplot
@@ -313,38 +313,126 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random
 # +
 # Logistic Regression
 from sklearn.linear_model import LogisticRegression
-logr = LogisticRegression(solver = 'saga', random_state=0).fit(X, y)
-logr.predict(X[:2, :])
-logr.predict_proba(X[:2, :])
-logr.score(X, y)
-# Linear Discriminant Analysis
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-lda = LinearDiscriminantAnalysis()
-lda.fit(X, y)
+#logr = LogisticRegression(solver = 'saga', random_state=0, max_iter = 1000)
+#logr.fit(X_train, y_train.values.ravel())
+#y_pred=logr.predict(X_test)
+print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(logr.score(X_test, y_test)))
 
+from sklearn.metrics import confusion_matrix
+confusion_matrix = confusion_matrix(y_test, y_pred)
+print(confusion_matrix)
+
+from sklearn.metrics import classification_report
+print(classification_report(y_test, y_pred))
+
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_curve
+logr_roc_auc = roc_auc_score(y_test, logr.predict(X_test))
+fpr, tpr, thresholds = roc_curve(y_test, logr.predict_proba(X_test)[:,1])
+plt.figure()
+plt.plot(fpr, tpr, label='Logistic Regression (area = %0.2f)' % logr_roc_auc)
+plt.plot([0, 1], [0, 1],'r--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver operating characteristic')
+plt.legend(loc="lower right")
+plt.savefig('Log_ROC')
+plt.show()
+# -
+
+# Linear Discriminant Analysis, LDA same performance as logistic, QDA worse performance because of collinearity
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+qda = QuadraticDiscriminantAnalysis()
+qda.fit(X_train, y_train.values.ravel())
+y_predqda=qda.predict(X_test)
+print('Accuracy of QDA classifier on test set: {:.2f}'.format(qda.score(X_test, y_test)))
+print(classification_report(y_test, y_predqda))
 
 # Naive Bayes
 from sklearn.naive_bayes import GaussianNB
 gnb = GaussianNB()
-gnb.fit(X, Y)
+gnb.fit(X_train, y_train.values.ravel())
+y_predgnb=gnb.predict(X_test)
+print('Accuracy of Naive Bayes classifier on test set: {:.2f}'.format(gnb.score(X_test, y_test)))
+print(classification_report(y_test, y_predgnb))
 
 
+# +
 # Stochastic Gradient Descent
 from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 
-# Always scale the input. The most convenient way is to use a pipeline.
-sgd = make_pipeline(StandardScaler(),
-                     SGDClassifier(max_iter=1000, tol=1e-3))
-sgd.fit(X, Y)
+# Make a pipelien and scale the input.
+sgd = make_pipeline(StandardScaler(),SGDClassifier(max_iter=1000, tol=1e-3))
+sgd.fit(X_train, y_train.values.ravel())
+
+# Calculate probabilities, accuracy, recall rates.
+y_predsgd=sgd.predict(X_test)
+print('Accuracy of SGD classifier on test set: {:.2f}'.format(sgd.score(X_test, y_test)))
+print(classification_report(y_test, y_predgnb))
 
 
+# +
 # Decision Tree Classifier
+from sklearn import tree
+dtreec = tree.DecisionTreeClassifier()
+dtreec.fit(X_train, y_train.values.ravel())
+
+# Calculate probabilities, accuracy, recall rates.
+y_predtree=dtreec.predict(X_test)
+print('Accuracy of Decision Tree Classifier on test set: {:.2f}'.format(dtreec.score(X_test, y_test)))
+print(classification_report(y_test, y_predtree))
+# -
 
 # Random Forest Classifier
+from sklearn.ensemble import RandomForestClassifier
+rf = RandomForestClassifier(max_depth=2, random_state=42)
+rf.fit(X_train, y_train.values.ravel())
+# Calculate probabilities, accuracy, recall rates.
+y_predrf=rf.predict(X_test)
+print('Accuracy of RandomForest classifier on test set: {:.2f}'.format(rf.score(X_test, y_test)))
+print(classification_report(y_test, y_predrf))
 
-# XGBoost
+# +
+# AdaBoost
+from sklearn.model_selection import cross_val_score
+from sklearn.ensemble import AdaBoostClassifier
+
+ada = AdaBoostClassifier(n_estimators=100)
+ada.fit(X_train,y_train.values.ravel())
+
+# Calculate probabilities, accuracy, recall rates.
+y_predada=ada.predict(X_test)
+print('Accuracy of AdaBoost classifier on test set: {:.2f}'.format(ada.score(X_test, y_test)))
+print(classification_report(y_test, y_predada))
+
+scores = cross_val_score(ada, X_test, y_test.values.ravel(), cv=5)
+scores.mean()
+
+# +
+# Baggingfrom sklearn.svm import SVC
+from sklearn.ensemble import BaggingClassifier
+bagc = BaggingClassifier(base_estimator=SVC(), n_estimators=20, random_state=42)
+bagc.fit(X_train,y_train.values.ravel())
+
+# Calculate probabilities, accuracy, recall rates.
+y_predbag=bagc.predict(X_test)
+print('Accuracy of Bagging classifier on test set: {:.2f}'.format(bagc.score(X_test, y_test)))
+print(classification_report(y_test, y_predbag))
+
+# +
+#Gradient Boostd Decision Trees (Maybe have a look at SVC later.)
+from sklearn.ensemble import GradientBoostingClassifier
+gbc = GradientBoostingClassifier(random_state=42)
+gbc.fit(X_train,y_train.values.ravel())
+
+# Calculate probabilities, accuracy, recall rates.
+y_predgb=gbc.predict(X_test)
+print('Accuracy of Gradient Boosted classifier on test set: {:.2f}'.format(gbc.score(X_test, y_test)))
+print(classification_report(y_test, y_predgb))
 # -
 
 # # Unbalanced Classes
