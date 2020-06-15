@@ -313,9 +313,9 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random
 # +
 # Logistic Regression
 from sklearn.linear_model import LogisticRegression
-#logr = LogisticRegression(solver = 'saga', random_state=0, max_iter = 1000)
-#logr.fit(X_train, y_train.values.ravel())
-#y_pred=logr.predict(X_test)
+logr = LogisticRegression(solver = 'saga', random_state=0, max_iter = 2000)
+logr.fit(X_train, y_train.values.ravel())
+y_pred=logr.predict(X_test)
 print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(logr.score(X_test, y_test)))
 
 from sklearn.metrics import confusion_matrix
@@ -444,3 +444,69 @@ print(classification_report(y_test, y_predgb))
 
 # Check class totals to examine evidence for imbalanced classes
 pd.crosstab(df.churn,df.churn, normalize = True)
+
+# As we can see from above, there is a definite imbalance in the number of customers who did not churn, which means that classification algorithims are likely to be significantly more biased towards predicting no, as to predicting yes
+#
+# To simplify the rerunning of previous algorithims under a SMOTE-resampling outlook, we shall take advantage of python's pipeline feature, to also perform feature selection to improve accuracy.
+
+# +
+from collections import Counter
+from sklearn.decomposition import PCA
+from imblearn.over_sampling import SMOTENC
+from imblearn.pipeline import Pipeline
+
+# Implement the required elements
+pca = PCA()
+smt = SMOTENC(categorical_features=range(2,45), random_state=42)
+classifiers = [
+    LogisticRegression(solver = 'saga', random_state=42, max_iter = 10000),
+    GaussianNB(),
+    tree.DecisionTreeClassifier(),
+    RandomForestClassifier(max_depth=2, random_state=42),
+    BaggingClassifier(base_estimator=SVC(), n_estimators=20, random_state=42),
+    AdaBoostClassifier(n_estimators=200),
+    GradientBoostingClassifier(random_state=42)
+    ]
+
+for classifier in classifiers:
+    pipe = Pipeline(steps=[('smt', smt),
+                      ('classifier', classifier)])
+    pipe.fit(X_train, y_train.values.ravel())   
+    print(classifier)
+    print("model score: %.3f" % pipe.score(X_test, y_test))
+    
+
+
+# Accuracy went down to 77% after resampling, but precision is quite high.
+# Naive Bayes holds similiar statistics, with a accuracy of 71%
+# Decision Tree had accuracy of 72%, random forests 74%
+# Bagging: 74% accuracy, similiar stats to log
+# Gradient Boosted 76% (second highest), tied with ada.
+# Seems clear that a mixutre of logr, gdb + ada would be useful
+
+# now, pipeline with feature selection via PCA 
+
+
+# -
+
+# Pipeline with Feature Selection
+#pipeFS = Pipeline([
+ # ('feature_selection', pca),
+  #  ('smt',smt),
+  #('classification', LogisticRegression(solver = 'saga', random_state=42, max_iter = 10000))
+#])
+#pipeFS.fit(X_train, y_train.values.ravel())
+print("model score: %.3f" % pipeFS.score(X_test, y_test))
+
+# +
+#import xgboost as xgb
+#model=xgb.XGBClassifier(random_state=42,learning_rate=0.01)
+#model.fit(X_train, y_train.values.ravel())
+#model.score(x_test,y_test)
+#also try catboost https://www.analyticsvidhya.com/blog/2018/06/comprehensive-guide-for-ensemble-models/
+
+# +
+# Pipeline with GridSearch
+
+# +
+# Combine for final model pipeline
