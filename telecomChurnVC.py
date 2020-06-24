@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -21,9 +22,36 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn import preprocessing
 from pylab import rcParams
-
-# Import the two methods from heatmap library
 from heatmap import heatmap, corrplot
+from sklearn.feature_selection import *
+from sklearn.svm import LinearSVC
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.svm import SVC
+from sklearn.model_selection import StratifiedKFold
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import classification_report
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_curve
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+from sklearn.naive_bayes import GaussianNB
+from sklearn.linear_model import SGDClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn import tree
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import cross_val_score
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import BaggingClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.model_selection import train_test_split
+import xgboost as xgb
+from collections import Counter
+from sklearn.decomposition import PCA
+from imblearn.over_sampling import SMOTENC
+from imblearn.pipeline import Pipeline
+from sklearn.model_selection import GridSearchCV
+from sklearn import metrics
 
 # +
 # Import dataset from csv
@@ -42,7 +70,7 @@ data.head(5)
 
 # +
 # Define the dictionary pairings
-nameDict= {'customerID':'object','gender':'object','seniorCitizen':'object','partner':'object','dependents': 'object' ,'tenure':'Int64','phoneService':'object','multipleLines':'object','internetService':'object','onlineSecurity':'object','onlineBackup':'object','deviceProtection':'object','techSupport':'object','streamingTV':'object','streamingMovies':'object','contract':'object','paperlessBilling':'object','paymentMethod':'object','monthlyCharges':np.float64,'totalCharges':np.float64,'churn':'object'}
+nameDict= {'customerID':'object','gender':'object','seniorCitizen':'object','partner':'object','dependents': 'object' ,'tenure':np.int64,'phoneService':'object','multipleLines':'object','internetService':'object','onlineSecurity':'object','onlineBackup':'object','deviceProtection':'object','techSupport':'object','streamingTV':'object','streamingMovies':'object','contract':'object','paperlessBilling':'object','paymentMethod':'object','monthlyCharges':np.float64,'totalCharges':np.float64,'churn':'object'}
 
 # Reread the csv wth added changes.
 df = pd.read_csv("telcoCustomerChurn.csv", header = 0, names = ['customerID','gender','seniorCitizen','partner','dependents','tenure','phoneService','multipleLines','internetService','onlineSecurity','onlineBackup','deviceProtection','techSupport','streamingTV','streamingMovies','contract','paperlessBilling','paymentMethod','monthlyCharges','totalCharges','churn'], na_values = " ",dtype=nameDict)
@@ -94,6 +122,8 @@ cv =  lambda x: np.std(x) / np.mean(x)
 var = np.apply_along_axis(cv, axis=0, arr=df.select_dtypes(include=['float64','int64']))
 print(var)
 # -
+
+df.info()
 
 ax = sns.boxenplot(x="tenure", y="churn", data=df)
 
@@ -193,7 +223,6 @@ dfdum=pd.get_dummies(df,prefix_sep='_')
 #!{sys.executable} -m pip install heatmapz
 
 
-from heatmap import heatmap, corrplot
 corr = df.corr()
 corr.style.background_gradient(cmap='coolwarm').set_precision(2)
 
@@ -208,14 +237,6 @@ so = s.sort_values(kind="quicksort")
 so[so <1]
 
 # # Feature Selection
-
-# Import related packages
-from sklearn.feature_selection import *
-from sklearn.svm import LinearSVC
-from sklearn.ensemble import ExtraTreesClassifier
-from sklearn.svm import SVC
-from sklearn.model_selection import StratifiedKFold
-from sklearn.feature_selection import RFECV
 
 df.shape
 
@@ -304,11 +325,35 @@ X_svc = X.iloc[:,cols]
 X_svc.columns
 
 
+# # Removing Collinearity
+
+# +
+# Import library for VIF
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+# Define a function to calculate the respective VIF for each variable in the daaset
+def calc_vif(X):
+
+    # Calculating VIF
+    vif = pd.DataFrame()
+    vif["variables"] = X.columns
+    vif["VIF"] = [variance_inflation_factor(X.values, i) for i in range(X.shape[1])]
+
+    return(vif) 
+
+
+# -
+
+# Calculate the VIF for the dataset
+calc_vif(df)
+
+# # Experimenting with Classification Algorithims
+
 # Train Test Split
 from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
 
-# # Experimenting with Classification Algorithims
+X_train.info()
 
 # +
 # Logistic Regression
@@ -342,6 +387,25 @@ plt.savefig('Log_ROC')
 plt.show()
 # -
 
+# Define a pipeline to search for the best combination of PCA truncation
+# and classifier regularization.
+pca = PCA()
+# set the tolerance to a large value to make the example faster
+logistic = LogisticRegression(penalty = 'l2', solver = 'sag',max_iter=10000, tol=0.1)
+pipe = Pipeline(steps=[('smt', smt),('fs', SelectKBest(f_classif)), ('logistic', logistic)])
+# Parameters of pipelines can be set using ‘__’ separated parameter names:
+param_grid = {
+    'fs__k': [5, 15, 30, 42,45],
+    'logistic__C': np.logspace(-0.01, 0.01, 20),
+}
+search = GridSearchCV(pipe, param_grid, n_jobs=-1,scoring = "recall")
+search.fit(X_train, y_train.values.ravel())
+print("Best parameter (CV score=%0.3f):" % search.best_score_)
+print(search.best_params_)Best parameter (CV score=0.853):
+#{'fs__k': 5, 'logistic__C': 1.0208157648868061}
+# bst is sad 0.846
+
+
 # Linear Discriminant Analysis, LDA same performance as logistic, QDA worse performance because of collinearity
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 qda = QuadraticDiscriminantAnalysis()
@@ -372,7 +436,7 @@ sgd.fit(X_train, y_train.values.ravel())
 # Calculate probabilities, accuracy, recall rates.
 y_predsgd=sgd.predict(X_test)
 print('Accuracy of SGD classifier on test set: {:.2f}'.format(sgd.score(X_test, y_test)))
-print(classification_report(y_test, y_predgnb))
+print(classification_report(y_test, y_predsgd))
 
 
 # +
@@ -415,7 +479,7 @@ scores.mean()
 # +
 # Baggingfrom sklearn.svm import SVC
 from sklearn.ensemble import BaggingClassifier
-bagc = BaggingClassifier(base_estimator=SVC(), n_estimators=20, random_state=42)
+bagc = BaggingClassifier(base_estimator=LogisticRegression(solver = 'sag',max_iter=10000, tol=0.1), random_state=42)
 bagc.fit(X_train,y_train.values.ravel())
 
 # Calculate probabilities, accuracy, recall rates.
@@ -424,15 +488,100 @@ print('Accuracy of Bagging classifier on test set: {:.2f}'.format(bagc.score(X_t
 print(classification_report(y_test, y_predbag))
 
 # +
+# NewogRes
+logis=LogisticRegression(penalty = 'l2', solver = 'sag',max_iter=10000, tol=0.1, C = 1.02)
+
+# New bagc
+baglog= BaggingClassifier(base_estimator=logis, random_state=42, n_estimators = 60, max_samples = 6, max_features = 2)
+
+# Parameters of pipelines can be set using ‘__’ separated parameter names:
+param_grid = {
+    #'n_estimators':range(20,100,10)
+    #'max_samples':range(1,100,5),
+    #'min_samples_split':range(200,2000,200),
+    #'min_samples_leaf':range(1,25,1)
+    'max_features':range(1,45,1)
+    #'subsample':[0.6,0.7,0.75,0.8,0.85,0.9]
+    #'learning_rate':[0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,1.0]
+    
+}
+search = GridSearchCV(baglog, param_grid, n_jobs=-1,scoring = "recall", cv =5)
+search.fit(X_train_res, y_train_res.values.ravel())
+print("Best parameter (CV score=%0.3f):" % search.best_score_)
+search.best_params_, search.best_score_
+
+# n_estimators 60 (95% ACCURACY...)
+# -
+
+bagc.get_params().keys()
+
+# +
 #Gradient Boostd Decision Trees (Maybe have a look at SVC later.)
 from sklearn.ensemble import GradientBoostingClassifier
-gbc = GradientBoostingClassifier(random_state=42)
+gbc = GradientBoostingClassifier(learning_rate = 0.04,n_estimators = 550,max_features='sqrt',subsample=0.8,random_state=42)
 gbc.fit(X_train,y_train.values.ravel())
 
 # Calculate probabilities, accuracy, recall rates.
 y_predgb=gbc.predict(X_test)
 print('Accuracy of Gradient Boosted classifier on test set: {:.2f}'.format(gbc.score(X_test, y_test)))
 print(classification_report(y_test, y_predgb))
+# -
+
+gbc.get_params().keys()
+
+sm = SMOTENC(random_state=42, categorical_features=[18, 19]) 
+X_res, y_res = sm.fit_resample(X, y)
+gbc =GradientBoostingClassifier(learning_rate=0.05,min_samples_leaf=50,max_features='sqrt',subsample=0.8,random_state=42, n_estimators=220)
+pipe = Pipeline(steps=[('sm', sm),('gbc', gbc)])
+
+ X_train_res, X_test_res, y_train_res, y_test_res = train_test_split(X_res, y_res, random_state=42)
+
+
+
+# +
+# Parameters of pipelines can be set using ‘__’ separated parameter names:
+param_grid = {
+   # 'n_estimators':range(20,1000,10)
+    #'max_depth':range(1,25,2),
+    #'min_samples_split':range(200,2000,200),
+    #'min_samples_leaf':range(1,25,1)
+    #'max_features':range(1,45,1)
+    #'subsample':[0.6,0.7,0.75,0.8,0.85,0.9]
+    #'learning_rate':[0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,1.0]
+    
+}
+search = GridSearchCV(gbc, param_grid, n_jobs=-1,scoring = "recall", cv =5)
+search.fit(X_train_res, y_train_res.values.ravel())
+print("Best parameter (CV score=%0.3f):" % search.best_score_)
+search.best_params_, search.best_score_
+
+# {'max_depth': 3, 'min_samples_split': 1200} n_estimators 550 .863 acc min samples lef 23, max_features = 1, subsample 0.8
+
+# -
+
+ search.best_params_, search.best_score_
+
+
+
+# +
+# XG Boost
+# Train Test Split
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
+
+import xgboost as xgb
+model=xgb.XGBClassifier(random_state=42,learning_rate=0.01)
+model.fit(X_train, y_train.values.ravel())
+model.score(X_test,y_test)
+
+# +
+# Cat Boost
+#from catboost import CatBoostClassifier
+#model=CatBoostClassifier() 
+# Try and get this to work later
+
+#model.fit(xtrain,ytrain,[1,2,3,5,6,7,8,9,10,11,12,13,14,15,16],eval_set=(xtest, ytest))
+#model.score(x_test,y_test)
 # -
 
 # # Unbalanced Classes
@@ -465,11 +614,12 @@ classifiers = [
     RandomForestClassifier(max_depth=2, random_state=42),
     BaggingClassifier(base_estimator=SVC(), n_estimators=20, random_state=42),
     AdaBoostClassifier(n_estimators=200),
-    GradientBoostingClassifier(random_state=42)
+    GradientBoostingClassifier(random_state=42),
+    xgb.XGBClassifier(random_state=42,learning_rate=0.01)
     ]
 
 for classifier in classifiers:
-    pipe = Pipeline(steps=[('smt', smt),
+    pipe = Pipeline(steps=[('scale',StandardScaler()),('smt', smt),
                       ('classifier', classifier)])
     pipe.fit(X_train, y_train.values.ravel())   
     print(classifier)
@@ -498,12 +648,7 @@ for classifier in classifiers:
 #pipeFS.fit(X_train, y_train.values.ravel())
 print("model score: %.3f" % pipeFS.score(X_test, y_test))
 
-# +
-#import xgboost as xgb
-#model=xgb.XGBClassifier(random_state=42,learning_rate=0.01)
-#model.fit(X_train, y_train.values.ravel())
-#model.score(x_test,y_test)
-#also try catboost https://www.analyticsvidhya.com/blog/2018/06/comprehensive-guide-for-ensemble-models/
+
 
 # +
 # Pipeline with GridSearch
