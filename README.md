@@ -3,7 +3,7 @@
 ## Idea/Project
 The key idea for the project was to explore and test my knowledge of the machine learning syntax and code available in python, after having learned most of my machine learning methods from R. However I also wanted to explore a particular project somewhat relevant to my domain area, which is why I examined the telecomChurn open data project on kaggle.
 
-As an actuarial student, we are often involved with the calculation and quantification of long-term uncertain cashflows, especially for businesses that hold long-term contracts with their customers, such as a mobile phone contract. Therefore, I wanted to build a model that would balance predictability and precision o help me understand the nature of the dataset.
+As an actuarial student, we are often involved with the calculation and quantification of long-term uncertain cashflows, especially for businesses that hold long-term contracts with their customers, such as a mobile phone contract. Therefore, I wanted to build a model that would balance predictability and precision to help me understand the nature of the dataset.
 
 However, my coursework ended up taking priority over the project so I decided to stop with just building a proper inferential model rather than exploring the model with the best possible performance.
 
