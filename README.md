@@ -62,7 +62,7 @@ from imblearn.over_sampling import SMOTENC
 ```
 
 # Training and Testing Model
-The entire process for training and testing the model is outlined in the python notebook, which I will reproduce here summarized for ease of view for ease of view.
+The entire process for training and testing the model is outlined in the python notebook, which I will reproduce here summarized for ease of view.
 
 ## Importing Data and preprocessing
 ```python
